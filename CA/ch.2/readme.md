@@ -108,6 +108,7 @@ addi $s3, $s3, 4
 숫자들이 컴퓨터 하드웨어에서는 높고 낮은 전기신호로 되어 있기 때문에, 이진수 숫자들로 이루어져있다. 모든 정보는 binary digits 로 이루어져 있다. 어느 베이스 던지, ith digit d 의 값은 $d * Base^i$ 이다.
 
 <img width="594" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/8f5405f6-eff6-444e-a3b3-4f8366771e86">
+
 MIPS 에서, **least significant bit** 는 가장 오른쪽 비트(bit 0) 을 가리키고, **most significant bit** 는 가장 왼쪽 비트(bit 31) 을 가리킨다. MIPS word 가 32bits 의 길이이기 때문에, 이것을 가지고 $2^{32}$ 개 만큼의 32-bit 패턴을 나타낼 수 있다. 이 양수들을 **unsigned numbers** 라고 한다.
 
 만약 더하기,빼기,곱하기,나누기 연산의 결과가 하드웨어의 rightmost bits 로 나타내기 어려우면, _overflow_ 가 발생한다.
@@ -120,7 +121,7 @@ MIPS 에서, **least significant bit** 는 가장 오른쪽 비트(bit 0) 을 �
 
 2의 보수 표현 방식은 모든 음수는 most significant bit, 가장 왼쪽 비트가 1이라는 장점이 있다. 따라서, 하드웨어는 음수인지, 양수인지 판단하기 위해서 most significant bit 만 보면 된다. 이 비트를 _sign bit_ 라고 부른다.
 
-그렇다면 아래와 같이 계산할 수 있다. sign bit 를 $-2^{31}$ 과 곱하면 된다. 왜냐면 음수면 1이어서 음수가 될 것이고, 양수면 어차피 sign bit 가 0 이어서 0이 되기 때문이다. 
+그렇다면 아래와 같이 계산할 수 있다. sign bit 를 $-2^{31}$ 과 곱하면 된다. 왜냐면 음수면 1이어서 음수가 될 것이고, 양수면 어차피 sign bit 가 0 이어서 0이 되기 때문이다.
 
 <img width="456" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/acb025ca-ce86-4341-bd03-78637d9bea26">
 
