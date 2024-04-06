@@ -160,6 +160,7 @@ function code 와 2-bit 시그널을 인풋으로 받는 ALU 를 디자인 하�
 컨트롤 유닛을 위한 truth table 을 작성하기 전에, control functino 을 정의하고 갑시다. Control line 은 오로지 opcode 에 의존하기 때문에, opcode 값에 따라 컨트롤 시그널이 0,1 또는 X(don't care) 인지 정의합시다. 
 
 <img width="777" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/fef4c17b-38aa-47f6-ae06-350a55275896">
+
 #### Operation of the Datapath
 
 각 명령어들이 datapath 를 어떻게 사용하는지 봅시다. 
