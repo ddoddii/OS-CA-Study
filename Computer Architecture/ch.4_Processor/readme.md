@@ -287,3 +287,48 @@ lw 에서 s0 은 4번째 단계인 MEM 이후에만 접근 가능합니다. 하�
 ### Pipeline Overview Summary
 
 파이프라인은 순차적인 명령어 스트림을 사용해서 parallelism 을 구현하는 방식입니다. 파이프라인은 각 명령어가 실행되는데 걸리는 시간(latency) 를 줄이는 방식이 아니라, 시간당 처리할 수 있는 명령어 수(throughput) 을 증가시키는 방식입니다. 
+
+## 6. Pipelined Datapath and Control
+
+
+앞서 봤던 것처럼, 명령어 실행 단계를 5 단계로  나눌 수 있습니다. 
+1. IF : Instruction fetch
+2. ID : Instruction decode and register file read
+3. EX : Execution or memory calculation
+4. MEM : Data memory access
+5. WB : Write back
+
+![image](https://github.com/ddoddii/ddoddii.github.io/assets/95014836/2944d4e5-9ac5-481b-89d7-4bda7e8178b4)
+
+명령어와 데이터를 주로 왼쪽에서 오른쪽으로 흘러가지만, 두 가지 예외가 있습니다. 
+1. write-back 단계에서, 결과를 다시 레지스터 파일에 씁니다. 
+2. PC의 다음 값을 고를때, PC+4 를 고르거나 MEM 단계에서 브랜치 주소를 골라야 합니다. 
+첫번째 예외는 data hazard 를 발생시킬 수 있고, 두번째 예외는 control hazard 를 발생시킬 수 있습니다. 
+
+![image](https://github.com/ddoddii/ddoddii.github.io/assets/95014836/a176b17c-54ae-4368-a1e0-d9b975d0addc)
+
+위의 예시에서는, IM 은 5단계 중 첫번째 단계(fetch)에서만 사용됩니다. 명령어가 fetch 되면, 두번째 단계(ID)에 넘겨줘야 합니다. 동시에, IM은 다음 명령어를 fetch 해옵니다. 이 과정을 더 원활하게 하기 위해, 스테이지 사이에 pipeline register 를 도입했습니다. 중간 결과를 이 pipeline register 에 저장하는 것입니다. 
+
+빨래방 예시에서, 첫번째 사람이 세탁을 끝내면 옷들을 잠시 바구니에 넣어둘 수 있습니다. 그러면 다음 사람이 세탁기를 바로 쓸 수 있습니다. 여기서 바구니의 역할을 하는 것이 pipeline register 입니다. 
+
+![image](https://github.com/ddoddii/ddoddii.github.io/assets/95014836/77fb0707-14db-49f3-abfa-7d892723177c)
+
+위에서는, 파이프라인 레지스터가 스테이지 사이에 도입된 것을 볼 수 있습니다. IF와 ID 사이에 있는 파이프라인 레지스터는 IF/ID 레지스터라고 부릅니다. 
+
+load 명령어 실행 시 파이프 스테이지가 어떻게 작동하는지 봅시다. 
+1. *Instruction fetch* :  명령어가 PC를 이용해서 IM에서 읽어지고, IF/ID 파이프라인 레지스터에 저장됩니다. PC 주소는 4만큼 증가하고, 다음 클럭 사이클을 위해 다시 PC에 쓰여집니다.  이 증가된 주소는 나중에 beq 와 같은 명령어가 있을 때 필요할 수 있기 때문에 IF/ID 파이프라인 레지스터에도 저장됩니다. 
+2. *Instruction decode and register file read* : IF/ID 파이프라인 레지스터는 16-bit immediate 필드를 공급하고, 이것은 sign-extended 되어서 32-bit 가 됩니다. 또한 2개의 레지스터를 읽기 위한 레지스터 주소도 제공합니다. 이 3가지 값들은 ID/EX 파이프라인 레지스터에 저장되고, 증가된 PC 주소도 저장됩니다. (나중을 위한 대비)
+3. *Execute or address calculation* : load 명령어는 레지스터1의 값을 읽고, sign-extended immediate 값을 ALU 를 이용해서 더합니다. 이 결과값은 EX/MEM 파이프라인 레지스터에 저장됩니다. 
+4. *Memory Access* : EX/MEM 파이프라인 레지스터에 저장된 주소를 이용해서 데이터 메모리에서 읽어옵니다. 이 데이터를 MEM/WB 파이프라인 레지스터에 로드합니다.
+5. *Write-back* : MEM/WB 파이프라인 레지스터로부터 데이터를 읽어오고, 다시 레지스터 파일에 write 합니다. 
+
+
+### Pipelined Control
+
+이제 파이프라인 datapath 에 컨트롤을 더해 봅시다. 각 파이프라인 단계의 컨트롤 값을 설정하면 됩니다. 컨트롤 라인이 하나의 파이프라인 단계에서 활성화된 컴포넌트에 관계 있기 때문에, 컨트롤 라인을 파이프라인 단계와 마찬가지로 5개의 그룹으로 나눌 수 있습니다. 
+
+1. *Instruction fetch* : 컨트롤 시그널은 IM을 읽고, PC에 write 합니다.
+2. *Instruction decode and register file read* : 매 클럭 사이클마다 같은 일이 일어납니다. 
+3. *Execute or address calculation* : 설정될 수 있는 시그널은 RegDst, ALUOp, ALUSrc 입니다.
+4. *Memory Access* : 이 단계에서 컨트롤 라인은 Branch, MemRead, MemWrite 입니다. 
+5. *Write-back* : 이 단계에서 컨트롤 라인은 MemtoReg, RegWrite 입니다. 
