@@ -332,3 +332,128 @@ load 명령어 실행 시 파이프 스테이지가 어떻게 작동하는지 �
 3. *Execute or address calculation* : 설정될 수 있는 시그널은 RegDst, ALUOp, ALUSrc 입니다.
 4. *Memory Access* : 이 단계에서 컨트롤 라인은 Branch, MemRead, MemWrite 입니다. 
 5. *Write-back* : 이 단계에서 컨트롤 라인은 MemtoReg, RegWrite 입니다. 
+
+## 7. Data Hazards : Forwarding vs. Stalling
+
+뒤의 명령어가 앞선 결과물에 의존해야 하는 경우를 살펴봅시다. 
+
+```asm
+sub $2, $1,$3 # Register $2 written by sub
+and $12, $2, $5 # 1st operand($2) depends on sub|
+or $13,$6,52 # 2nd operand($2) depends on sub|
+add $14,52,$2 # 1st($2) & 2nd($2) depend on sub|
+SW $15,100($2) # Base ($2) depends on sub|
+```
+
+이러한 명령어들은 파이프라인에서 어떻게 동작할까요? 
+
+![image](https://github.com/ddoddii/ddoddii.github.io/assets/95014836/276b51c7-f1dd-4693-b388-41ab57926db4)
+
+
+위의 파이프라인을 보면, sub 명령어의 결과를 제대로 전달받는 명령어는 add, sw 임을 볼 수 있습니다. and, or 는 틀린 값을 전달받게 됩니다. 
+
+하지만 실제로 sub 의 결과값이 나오는 시점은, CC3으로 EX 단계가 끝난 후입니다. 그리고 and, or 에서 실제 값이 필요한 시점은 EX단계 직전인 CC4와 CC5 입니다. 그럼 이 결과값이 나오는 순간 바로 forward 하면 되지 않을까요? 
+
+**Forwarding** 은 어떻게 동작할까요? 이 섹션에서는 EX 단계에서 forwarding 하는 것의  어려움을 살펴봅시다. 명령어가 레지스터를 EX 단계에서 접근하고자 하는 것은, 전 단계에서 WB 단계에서 레지스터에 저장하고자 한 값을 ALU 의 인풋으로 필요할 때입니다. 
+ 
+파이프라인 레지스터의 이름을 사용해서, 의존성을 더 정확하게 표현할 수 있습니다. 예를 들어, "ID/EX.RegisterRS" 는 ID/EX 파이프라인 레지스터의 RegisterRS 필드에 값이 있다는 것을 표현합니다. 이 방식을 사용해서, 2가지 페어의 hazard conditions를 표현하면, 아래와 같습니다.
+
+1a. EX/MEM.RegisterRd = ID/EX.RegisterRs
+1b. EX/MEM.RegisterRd = ID/EX.RegisterRt
+
+1은 Read After Write(RAW) hazard 입니다. 이것은 **EX/MEM** 에 있는 명령어가 레지스터에게 결과를 쓰기 전에, ID/EX 단계에 있는 다음 명령어가 같은 레지스터(RegisterRs 또는 RegisterRt)로부터 읽어야 할 때 발생합니다. 
+
+2a. MEM/WB.RegisterRd = ID/EX.RegisterRs
+2b. MEM/WB.RegisterRd = ID/EX.RegisterRt
+
+2도 RAW hazard 이지만, 이 경우에는 **MEM/WB 단계**에서 레지스터에 값을 쓰기 전에, ID/EX 단계에 있는 명령어가 같은 레지스터(RegisterRs 또는 RegisterRt)로부터 읽어야 할 때 발생합니다. 
+
+(RS : Source Register, Rt : Target Register, Rd : Destination Register)
+
+모든 명령어들이 레지스터에 쓰기를 하는 것은 아니기 때문에, 이 정책은 틀립니다. Forward 하지 말아야 할 때 forward 할 수 도 있습니다. 간단한 해결책은 RegWrite 시그널이 활성화될 것인지를 보는 것입니다. 
+
+이제 hazards 를 감지할 수 있으니, 적절한 데이터를 forward 하는 방법을 봅시다. 만약 ID/EX 파이프라인 레지스터 뿐만 아니라 어느 파이프라인 레지스터에서 값을 가져와서 ALU의 인풋으로 넣을 수 있다면, 적절한 데이터를 forward 할 수 있습니다. 
+
+이제 hazards 를 감지하는 조건들과 이것을 해결하기 위한 컨트롤 시그널들을 봅시다. 
+
+1. EX hazard 
+
+```asm
+if (EX/MEM.Regwrite 
+and (EX/MEM.RegisterRd != 0)
+and (EX/MEM.RegisterRd = ID/EX.RegisterRs)) ForwardA = 10
+
+if (EX/MEM.RegWrite
+and (EX/MEM.RegisterRd != 0)
+and (EX/MEM.RegisterRd = ID/EX.RegisterRt)) ForwardB = 10
+```
+
+
+2. MEM hazard
+
+```asm
+if (MEM/WB.RegWrite
+and (MEM/WB.RegisterRd ‡ 0)
+and not(EX/MEM.RegWrite and (EX/MEM.RegisterRd * 0)
+	and (EX/MEM.RegisterRd * ID/EX.RegisterRs))
+and (MEM/WB.RegisterRd = ID/EX.RegisterRs)) ForwardA = 01
+
+if (MEM/WB.RegWrite
+and (MEM/WB.RegisterRd ‡ 0)
+and not(EX/MEM.RegWrite and (EX/MEM.RegisterRd * 0)
+	and (EX/MEM.RegisterRd * ID/EX.RegisterRt))
+and (MEM/WB.RegisterRd = ID/EX.RegisterRt)) ForwardB = 01
+```
+
+### Data Hazards and Stalls
+
+로드 명령어에 의해서 레지스터에 write 하고, 뒤의 명령어가 같은 레지스터를 읽을 때 forwarding 은 소용이 없습니다. 따라서 *hazard detection unit* 도 필요합니다. 이것은 ID 단계에서 작동하는데, load 하는 명령어와 그 레지스터를 사용하는 명령어 사이에 stall 을 삽입합니다. 
+
+```asm
+if (ID/EX.MemRead and 
+	((ID/EX. RegisterRt = IF/ID.RegisterRs) or
+	(ID/EX.RegisterRt = IF/ID.RegisterRt)))
+stall the pipeline
+```
+
+첫번째 줄은 명령어가 load 인지 판별합니다. (Data memory 를 읽는 유일한 명령어는 load 입니다.) 두번째 줄은 EX 단계에서 load 의 목적지 레지스터가 ID 단계에서 소스 레지스터와 매치하는지 확인합니다. 이 조건이 맞다면, 파이프라인을 한번 stall 합니다. 
+
+이때 실제로는, nop 가 삽입됩니다. 이것은 아무것도 하지 않는 명령어로, 버블처럼 작동합니다. 
+
+<img width="709" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/9ec17ee3-e69f-4327-9fab-75f781c4bfd6">
+
+
+## 8. Control Hazards
+
+브랜치와 관련된 hazards 도 있습니다. 브랜치 할지 결정하는 것은 MEM 단계에서 이루어집니다. 
+
+<img width="709" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/11106355-93d2-49f6-a5d9-6a42420e27c8">
+
+Fetch 할 적절한 명령어를 결정하는데 지연이 생기는 것을 control hazard 또는 branch hazard 라고 합니다. 
+
+### Assume Branch Not taken
+
+첫번째 해결방법은, 브랜치가 not taken 일 것이라고 예측하고, 나머지 명령어들을 계속 실행하는 것입니다. 만약 예측이 틀려서 taken 하다면 그동안 fetch/decode 된 명령어들을 버립니다(flush). 
+
+### Reducing the Delay of Branches
+
+성능을 증가시키는 또 다른 방법은 taken branch 의 비용을 줄이는 것입니다. 브랜치를 위한 PC가 MEM 단계에서 결정된다고 했지만, 이 결정을 좀 더 일찍 하면 flush 되는 명령어 수를 줄일 수 있습니다. 실제로, 브랜치는 간단한 테스트(equality, sign) 에만 의존하고, 이러한 간단한 연산들은 ALU를 모두 사용하지 않습니다. 
+
+브랜치 결정을 일찍 하게 하는것은 2가지 액션이 필요합니다 : 브랜치 타겟 주소 연산, 브랜치 결정을 평가하는 것입니다. 브랜치 타겟 주소 연산하는 것은 쉬운데, 이미 IF/ID 파이프라인 레지스터에 PC 값과 immediate 값이 있기 때문입니다. 따라서 브랜치 adder 만 EX 단계에서 ID 단계로 옮기면 됩니다. 
+
+어려운 작업은 브랜치 결정 입니다. branch equal 에서는, 2개 레지스터 읽어온 값이 동등한지 비교를 합니다. 만약 ID 단계로 옮기면, ID 단계에 forwarding hardware 도 필요합니다. 레지스터의 값을 비교하는 것은 RegFile read 가 끝난 후에야 할 수 있으며, 비교하고 업데이트 하는 작업은 mux, comparator, and gate 를 추가해야 합니다. 그럼에도, ID 단계로 브랜치 실행을 옮기는 것은 성능 발전이 있습니다.
+
+
+### Dynamic Branch Prediction
+
+브랜치가 항상 not taken 이라고 가정하는 것은 가장 간단한 형태의 브랜치 예측입니다. 좀 더 발전된 형태는, 최근 브랜치 결과를 보고 예측하는 다이나믹 브랜치 예측 방식입니다. 
+
+이것을 구현하는 방식에는 branch prediction buffer 또는 branch history table 을 이용하는 방식이 있습니다. branch prediction buffer는 작은 메모리로, 주소의 하위 부분에 의해 인덱싱되어 있습니다. 이 메모리에는 브랜치가 최근에 taken 되었는지 여부를 저장합니다. 하지만 이 1-bit을 사용한 예측 방식도 한계가 있습니다. 만약 브랜치가 대부분 taken 되었다고 해도, not taken 일때는 예측이 2번 이상 틀릴 수 있습니다. 
+
+예측기의 정확성은 이상적으로 taken branch 의 빈도와 동일해야 합니다. 이 약점을 커버하기 위해, 2-bit 예측 방식이 사용됩니다. 이 방식에서는 예측이 바뀌려면 2번 틀려야 합니다. 
+
+<img width="587" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/4adbd6c1-a19c-4e14-858a-f332da594b0e">
+
+
+
+
