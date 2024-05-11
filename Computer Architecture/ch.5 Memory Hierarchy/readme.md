@@ -195,7 +195,7 @@ associativity 정도를 증가시키면, miss rate 가 감소된다. 더 중요�
 <img width="375" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/c5fc48ec-45ae-423a-902f-fddaff49c47b">
 
 - **Tag** : 각 set 마다 매핑된 블럭의 수와 관련있다. 
-- **Index** : set 의 개수와 관련 있다. (e.g. **4096**(=$2^{12}$) **blocks**, 4-word block size, **4-way**(=$2^2$) **set associative** 일때 -> 12 - 2 = 10 bits 필요. fully associative 캐시의 경우에는 index 가 필요없다. )
+- **Index** : set 의 개수와 관련 있다. (e.g. **4096**(= $2^{12}$) **blocks**, 4-word block size, **4-way**(= $2^2$ ) **set associative** 일때 -> 12 - 2 = 10 bits 필요. fully associative 캐시의 경우에는 index 가 필요없다. )
 - **Block offset** : 블럭 사이즈와 관련 있다. (e.g. 4-word block size -> 16byte -> 4 bits 필요)
 
 
