@@ -193,6 +193,7 @@ associativity 정도를 증가시키면, miss rate 가 감소된다. 더 중요�
 이제 **set associative한 캐시에서 블럭을 찾는 방법**을 알아보자. direct-mapped 캐시와 동일하게, set associative 캐시의 각 블럭 내에는 블럭 주소를 나타내는 **주소 태그**가 있다. 프로세서로부터 온 주소가 블럭 주소와 매치하는지 찾기 위해 set 내에 모든 캐시 블럭의 태그를 비교한다. 
 
 <img width="375" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/c5fc48ec-45ae-423a-902f-fddaff49c47b">
+
 - **Tag** : 각 set 마다 매핑된 블럭의 수와 관련있다. 
 - **Index** : set 의 개수와 관련 있다. (e.g. **4096(=$2^{12}$) blocks**, 4-word block size, **4-way(=$2^2$) set associative** 일때 -> 12 - 2 = 10 bits 필요. fully associative 캐시의 경우에는 index 가 필요없다. )
 - **Block offset** : 블럭 사이즈와 관련 있다. (e.g. 4-word block size -> 16byte -> 4 bits 필요)
