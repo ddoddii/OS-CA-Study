@@ -137,3 +137,143 @@ write miss 의 경우에는 어떻게 할까? 우선 메모리에서 워드 블�
 <img width="842" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/9c872a7d-dcdd-4cc6-8e00-68852b8bf16a">
 
 
+## 4. Measuring and Improving Cache Performance
+
+이번 챕터에서는 캐시 성능을 측정하는 방법을 알아본다. 그 후, 캐시 성능을 향상시킬 수 있는 2가지 방법을 알아본다. 첫번째는 **두개의 다른 메모리 블럭이 같은 캐시 위치에 들어가는 확률을 감소**시켜 miss rate 를 감소시킬 수 있는 방법이다. 두번째는 **메모리 계층구조에 새로운 레벨을 추가**해서 miss penalty 를 감소시키는 방법이다. 이것을 **multilevel caching** 이라고 한다. 
+
+**CPU 시간**은 CPU가 프로그램을 실행할 때 보내는 클럭 사이클과 CPU 가 메모리 시스템을 기다리면서 보내는 클럭 사이클로 나눌 수 있다. 
+
+$$CPU \ time = (CPU \ execution \ clock \ cycle + Memory-stall \ clock \ cycle) \times Clock \ cycle \ time$$
+
+memory-stall 클럭 사이클의 주된 원인은 캐시 미스이다. memory-stall 클럭 사이클은 read-stall 사이클과 write-stall 사이클로 나눌 수 있다. **read-stall cycle**은 프로그램 당 read 하는 수로 정의할 수 있다. 
+$$Read-stall \ cycles = \frac{Reads}{Program} \times Read \ miss\ rate \times Read \ miss\ penalty $$
+writes 는 좀 더 복잡하다. write 의 stall 에서는 2가지 원인이 있는데, write miss 와 write buffer stalls 이다. 
+
+$$ Write-stall \ cycles = \left(\frac{Writes}{Program} \times Write \ miss \ rate \times Write \ miss \ penalty\right)+ Write \ buffer \ stalls$$
+
+캐시 구조에서, read 와 write penalty 는 거의 동일하다. write buffer stalls 를 무시 가능하다고 가정하면, read 와 write 를 합쳐서 **memory-stall clock cycles** 를 정의할 수 있다. 
+
+$$Memory-stall \ clock \ cycles = \frac{Memory \ accesses}{Program} \times Miss \ rate \times Miss \ penalty$$
+
+다르게 나타내면, 아래와 같다. 
+$$Memory-stall \ clock \ cycles = \frac{Instructions}{Program} \times \frac{Misses}{Instruction} \times Miss \ penalty$$
+
+### Reducing Cache Misses by More Flexible Placement of Blocks
+
+direct-mapped에서는, 블럭은 메모리의 주소를 기반으로 하기 때문에 캐시안에 정확히 한 곳에만 위치할 수 있었다. 하지만 블럭을 실제로 위치시키는 방법은 여러가지가 있다. 
+
+첫번째는 캐시 내에 아무곳에 위치시키는 것이다. 이 방법은 **fully associative** 라고 한다. 하지만 이 방법에서는 캐시 내에서 블럭을 찾으려면 캐시 엔트리 전체를 다 훑어봐야 한다. 따라서 이 방법은 블럭의 수가 적은 캐시에서만 실용적이다. 
+
+다른 방법은 direct-mapped 와 fully associative의 중간인 **set associative** 방법이다. set associative 캐시에서는 블럭이 들어갈 수 있는 몇개의 위치가 있다. 만약 n개의 위치에 블럭이 들어갈 수 있다면, **n-way set associative** 캐시라고 한다. n-way set associative 캐시는 여러 개의 set 로 구성되는데, 각 set 는 n 개의 block 들로 구성된다. 메모리의 각 블럭은 index field 로 인해 유니크한 set으로 매핑된다. 그리고 블럭은 set 내 어느 위치에나 들어갈 수 있다. 
+
+예를 들어서, 아래는 12번 블럭이 각각 방법마다 들어갈 수 있는 위치를 나타낸다. 
+
+<img width="592" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/37b2601c-f1d8-4717-aa81-85ffc1f562fe">
+
+- Direct Mapped
+	- $(Block \ number) \ modulo \ (Number \ of \ blocks \ in \ the \ cache)$
+	- 12 mod 8 = 4 이므로, 4번 블럭에만 들어갈 수 있다. 
+- Set associative 
+	- $(Block \ number) \ modulo \ (Number \ of \ sets \ in \ the \ cache)$
+	- 12 mod 4 = 0 이므로, 0번 set 내 아무 위치에 들어갈 수 있다. 
+	- 찾을 때는 set 내의 모든 tag 들을 다 훑어야 한다. 
+- Fully associative
+	- 아무 위치에 들어갈 수 있다. 
+
+n-way set associative에서 **n** 에 따라 분류할 수 도 있다. Direct mapped 는 n=1 과 같고, fully associative 는 캐시가 m 개의 엔트리가 있을 때 m-way set associative 와 같다. 
+
+associativity 정도를 증가시키면, miss rate 가 감소된다. 더 중요한 장점은, hit time 을 증가시키는 것이다. 
+
+
+
+<img width="609" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/d7d53762-5925-45fe-9f05-debb33913400">
+
+### Locating a Block in the Cache
+
+이제 **set associative한 캐시에서 블럭을 찾는 방법**을 알아보자. direct-mapped 캐시와 동일하게, set associative 캐시의 각 블럭 내에는 블럭 주소를 나타내는 **주소 태그**가 있다. 프로세서로부터 온 주소가 블럭 주소와 매치하는지 찾기 위해 set 내에 모든 캐시 블럭의 태그를 비교한다. 
+
+<img width="375" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/c5fc48ec-45ae-423a-902f-fddaff49c47b">
+- **Tag** : 각 set 마다 매핑된 블럭의 수와 관련있다. 
+- **Index** : set 의 개수와 관련 있다. (e.g. **4096(=$2^{12}$) blocks**, 4-word block size, **4-way(=$2^2$) set associative** 일때 -> 12 - 2 = 10 bits 필요. fully associative 캐시의 경우에는 index 가 필요없다. )
+- **Block offset** : 블럭 사이즈와 관련 있다. (e.g. 4-word block size -> 16byte -> 4 bits 필요)
+
+
+index 값은 타겟 주소가 포함되어 있는 set 을 선택하기 위해 사용되고, set 내에 있는 모든 tag 를 검색한다. 속도가 중요하기 때문에, set 내에 모든 태그들은 병렬적으로 검색된다. 
+
+전체 캐시 사이즈가 동일한 경우, associativity 를 증가시키는 것은 set 당 블럭의 개수를 증가시킨다. 이것은 tag 를 검색해야 하는 범위의 증가를 의미한다. associativity를 2의 factor 로 증가시키는 것은 set 당 블럭의 수를 2배씩 증가시키고, index 의 사이즈를 1bit 만큼 감소시키고, tag 의 사이즈를 1bit 만큼 증가시킨다. fully associative 캐시의 경우 set 가 1개인 경우와 동일하므로, 모든 블럭이 병렬적으로 검색되어야 한다. 따라서 주소에는 인덱스가 없고, 모두 태그로 구성된다. 
+
+direct-mapped 캐시의 경우, 엔트리가 오직 하나의 블럭에만 위치할 수 있으므로, 하나의 comparator 만 필요하다. 따라서 인덱싱만 사용해서 캐시에 접근할 수 있다. 
+
+아래의 4-way set associative 캐시의 경우, 4개의 comparator와 그 중 1개를 고르기 위한 4-to-1 multiplexor 가 필요하다. 캐시의 접근은 적절한 set 를 찾기 위해 인덱싱하는 것과 그 중 tag 를 검색하는 과정으로 이루어진다. 
+
+<img width="612" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/e6671e24-9a5e-4965-8e63-c5d81ccd28b8">
+
+
+### Choosing which Block to Replace
+
+direct-mapped 캐시에서 미스가 발생하면, 요청된 블럭이 단 한 곳으로만 매핑될 수 있기 때문에 그 위치를 교체해야 했다. associative 캐시의 경우에는 요청된 블럭을 넣을 수 있는 위치를 고를 수 있다. 따라서 교체할 블럭을 고를 수 있다. fully associative 캐시의 경우, 모든 블럭은 교체의 후보이다. set associative 캐시의 경우 선택된 set 내의 블럭 중 교체해야 한다. 
+
+가장 많이 사용되는 방법은 **least recently used (LRU)** 이다. LRU 에서, 가장 오래전에 사용된 블럭이 교체된다. 
+
+### Reducing the Miss Penalty using Multilevel Caches
+
+프로세서의 매우 빠른 clock rate 속도와 DRAM을 접근하는데 필요한 긴 시간의 간극을 줄이기 위해, 대부분의 마이크로프로세서는 **추가적인 레벨의 캐싱**을 지원한다. 이 **second-level 캐시**는 같은 칩에 위치하고, 프라이머리 캐시에서 미스가 발생한 경우에 접근된다. 만약 second-level 캐시가 데이터를 가지고 있으면, first-level 캐시에 대한 miss penalty 는 second-level 캐시에 접근하는 시간이 된다. 이것은 메인 메모리에 접근하는 시간보다 훨씬 적게 걸린다. 
+
+주 캐시와 두번째 캐시의 디자인 철학은 다르다. 주 캐시는 hit time 을 최소화하는데 중점을 두고, 두번째 캐시는 되도록 메인 메모리에 가지 않게끔 miss rate 를 최소화하는데 중점을 둔다. 
+
+싱글 레벨 캐시에 비해서, 멀티레벨 캐시의 주 캐시 사이즈는 대체로 작다. 그리고, 주 캐시는 더 작은 블럭 사이즈를 사용해서, 캐시 사이즈를 줄이고 miss penalty 를 줄인다. 두번째 캐시는 싱글 레벨 캐시보다 훨씬 크고, miss rate 를 줄인다. 
+
+### Software Optimization via Blocking
+
+배열을 다룰 때, 배열에 대한 접근이 메모리에 순차적이면 좋은 성능을 얻을 수 있다. 여러 개의 배열을 다룰 때 어떤 배열은 row 순서로 접근하고 다른 배열은 column 순서로 접근한다고 하자. 배열에 대해 전체 row 또는 column 을 다루는 것보다 **blocked 알고리즘**은 block 에 대해 연산한다. 목표는 캐시에 로드된 데이터를 교체되기 전까지 최대한 많이 접근하는 것이다. 이것은 캐시 미스를 줄이고, 시간적 지역성을 증가시킨다. 
+
+코드의 예시를 보자. 매트릭스 연산이다. 
+
+```c
+for (int j=0 ; j<n ; ++j)
+{
+	double cij = C[i+j*n]; // cij = C[i][j]
+	for (int k=0 ; k<n; k++) {
+		cij += A[i+k*n] * B[k+j*n]; // cij += A[i][k] * B[k][j]
+		C[i+j*n] = cij; // C[i][j] = cij
+	}
+}
+```
+
+<img width="646" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/0d054faf-f821-4fa2-83a7-4f07d9080c94">
+
+
+여기서는, B 의 N-by-N 원소들을 모두 읽고, A의 row 에서 N개의 원소들을 읽고 C의 row 에 쓴다. 
+
+capacity miss 의 수는 N 과 캐시의 사이즈에 달려있다. 만약 캐시에 3개의 N * N  매트릭스를 저장할 수 있다면 아무런 문제가 없다. 앞선 예시들에선, N=32 여서 32 * 32 = 1024 원소들이고, 각 원소는 8bytes 여서 3개의 매트릭스가 24KiB 를 차지한다고 가정했다. 이것은 Inter Core i7 의 32KiB 캐시에 아주 잘 들어간다. 
+
+만약 캐시가 1개의 N * N 매트릭스와 1개의 row 만 저장할 수 있다면, A의 i번째 row 와 B가 캐시에 저장되어야 한다. 
+
+접근되는 원소들이 캐시에 모두 있음을 보장하기 위해, 코드를 submatrix 에 대해 연산하도록 수정할 수 있다. 사이즈 N에 대해 연산하는 것이 아닌, **BLOCKSIZE** 에 대해 연산한다. BLOCKSIZE는 *blocking factor* 라고도 한다. 
+
+```c
+#define BLOCKSIZE 32
+void do_block(int n, int si, int sj, int sk, double *A, double *B, double *C)
+{
+	for (int i = si; i < si+BLOCKSIZE; ++i) {
+		for (int j = sj; j < sj+BLOCKSIZE; ++j) {
+			double cij = C[i+j*n]; // cij = C[i][j]
+			for (int k = sk; k < sk + BLOCKSIZE; k++) {
+				cij += A[i+k*n] * B[k+j*n]; // cij += A[i][k] * B[k][j]
+			C[i+j*n] = cij; // C[i][j] = cij
+			}
+		}
+	}
+}
+void dgemm(int n, double* A, double* B double* C)
+{
+	for (int sj = 0; sj < n; sj += BLOCKSIZE)
+		for (int si = 0; si < n; si += BLOCKSIZE)
+			for (int sk = 0; sk < n; sk += BLOCKSIZE) 
+				do_block(n,si,sj,sk,A,B,C);
+}
+```
+
+<img width="651" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/8e609aaf-f9ef-416d-88b4-45f0aec8eaad">
+
+블럭을 이용해 캐시 미스를 줄일 수 도 있지만, 블럭은 레지스터 재할당에도 도움이 될 수 있다. 작은 블러킹 사이즈로 인해 블럭이 레지스터에 저장되고, 프로그램에서 load 와 store 의 수를 줄일 수 있다. 
