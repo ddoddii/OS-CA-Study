@@ -1,8 +1,7 @@
-## Computer Organization and Design, 5th edition
+## <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Blue%20Book.png" alt="Blue Book" width="25" height="25" /> Computer Organization and Design, 5th edition
 
-### Table of Contents
 
-### 🌳 Schedule
+### <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Twelve-Thirty.png" alt="Twelve-Thirty" width="25" height="25" /> Schedule
 
 | Week  | Topic                                             |
 | ----- | ------------------------------------------------- |
