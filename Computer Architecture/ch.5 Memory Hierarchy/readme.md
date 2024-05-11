@@ -90,7 +90,7 @@ $$2^{n}* (2^{m}* 32 + (32-n-m-2) + 1) = 2^{n}* (2^m*32+31-n-m)$$
 
 tag 는 주소의 상위 비트들과 비교해서 요청된 주소가 캐시 엔트리에 있는지 확인한다. 태그가 일치하고, valid bit가 1이면, 캐시 히트이고 index 를 사용해서 캐시 블럭 내 word 를 찾는다. 
 
-**캐시 블럭**은 캐시 태그를 갖고 있는 캐시 데이터이다. 1-KB direct mapped 캐시이고 1-word 블럭을 가지고 있는 캐시 구조는 아래와 같다. (1 word = 4 byte 이므로 2개의 byte select bit를 가진다.)
+**캐시 블럭**은 캐시 태그를 갖고 있는 캐시 데이터이다. 1-KB direct mapped 캐시이고 1-word 블럭을 가지고 있는 캐시 구조는 아래와 같다. (1 word = 4 byte 이므로 2개의 byte select bit를 가진다.)
 
 <img width="825" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/816f0c7d-fd26-48f4-80fa-02ec813861b8">
 
@@ -105,7 +105,7 @@ Direct Mapped 캐시의 장단점은 다음과 같다.
 	- 간단한 디자인
 	- 빠르게 만들기 쉽다
 - 단점
-	- **trashing** 에 취약하다. 
+	- **thrashing** 에 취약하다. 
 	- 만약 자주 쓰이는 2개의 캐시 라인이 같은 인덱스를 가진다면, 계속해서 하나를 캐시에서 내쫓아야 한다. 
 
 캐시에서 hit time 을 개선하려면 1)캐시를 더 작게 만들거나, 2) Direct mapped 캐시를 사용할 수 있다. 캐시에서 hit ratio 를 개선하려면, 캐시 사이즈를 늘려야 한다. 따라서 hit time 과 hit ratio 간 트레이드 오프를 적절하게 계산해서 캐시를 설계해야 한다. 
