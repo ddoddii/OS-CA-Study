@@ -1,5 +1,30 @@
 # Ch.2 Instructions : Language of the Computer
 
+<details>
+<summary>
+<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Bookmark%20Tabs.png" alt="Bookmark Tabs" width="25" height="25" /> Table of Contents </summary>
+
+- [Ch.2 Instructions : Language of the Computer](#ch2-instructions--language-of-the-computer)
+  - [2.1 Introduction](#21-introduction)
+    - [Instruction Set Architecture(ISA)](#instruction-set-architectureisa)
+    - [Main Concepts](#main-concepts)
+    - [MIPS R4000 ISA](#mips-r4000-isa)
+  - [2.2 Operations of the Computer Hardware](#22-operations-of-the-computer-hardware)
+  - [2.3 Operands of the Computer Hardware](#23-operands-of-the-computer-hardware)
+    - [Memory Operands](#memory-operands)
+    - [Constant or Immediate Operands](#constant-or-immediate-operands)
+  - [2.4 Signed and Unsigned Numbers](#24-signed-and-unsigned-numbers)
+      - [2의 보수를 사용하여 부호 뒤집기](#2의-보수를-사용하여-부호-뒤집기)
+  - [2.5 Representing Instructions in the Computer](#25-representing-instructions-in-the-computer)
+    - [MIPS Fields](#mips-fields)
+  - [2.6 Logical Operations](#26-logical-operations)
+  - [2.7 Instructions for Making Decisions](#27-instructions-for-making-decisions)
+      - [Compiling if-then-else into Conditional Branches](#compiling-if-then-else-into-conditional-branches)
+    - [Loops](#loops)
+      - [Compiling while Loop in C](#compiling-while-loop-in-c)
+
+</details>
+
 ## 2.1 Introduction
 
 컴퓨터 언어는 instructions 라고 불리고, 단어들은 instruction set 이라고 한다. 따라서 Instruction Set Architecture 는 Computer Architecture 이다. 컴퓨터는 프로세서(Datapath and Control) + 메모리 + I/O 로 구성되어 있다.

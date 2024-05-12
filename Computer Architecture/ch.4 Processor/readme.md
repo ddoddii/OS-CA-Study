@@ -1,5 +1,42 @@
 # Ch.4 The Processor
 
+<details>
+<summary>
+<img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Bookmark%20Tabs.png" alt="Bookmark Tabs" width="25" height="25" /> Table of Contents </summary>
+
+- [Ch.4 The Processor](#ch4-the-processor)
+	- [1. Introduction](#1-introduction)
+		- [Overview of Implementation](#overview-of-implementation)
+	- [2. Logical Design Conventions](#2-logical-design-conventions)
+		- [Clocking Methodology](#clocking-methodology)
+	- [3. Building a Datapath](#3-building-a-datapath)
+		- [Creating a single datapath](#creating-a-single-datapath)
+	- [4. A Simple Implementation Scheme](#4-a-simple-implementation-scheme)
+		- [ALU Control](#alu-control)
+		- [Designing the Main Control Unit](#designing-the-main-control-unit)
+			- [Operation of the Datapath](#operation-of-the-datapath)
+			- [Finalizing Control](#finalizing-control)
+	- [5. An Overview of Pipelining](#5-an-overview-of-pipelining)
+		- [Desiging Instruction Sets for Pipelining](#desiging-instruction-sets-for-pipelining)
+		- [Pipeline Hazards](#pipeline-hazards)
+			- [Structural hazard](#structural-hazard)
+			- [Data Hazard](#data-hazard)
+			- [Control Hazard](#control-hazard)
+		- [Pipeline Overview Summary](#pipeline-overview-summary)
+	- [6. Pipelined Datapath and Control](#6-pipelined-datapath-and-control)
+		- [Pipelined Control](#pipelined-control)
+	- [7. Data Hazards : Forwarding vs. Stalling](#7-data-hazards--forwarding-vs-stalling)
+		- [Data Hazards and Stalls](#data-hazards-and-stalls)
+	- [8. Control Hazards](#8-control-hazards)
+		- [Assume Branch Not taken](#assume-branch-not-taken)
+		- [Reducing the Delay of Branches](#reducing-the-delay-of-branches)
+		- [Dynamic Branch Prediction](#dynamic-branch-prediction)
+
+
+</details>
+
+
+
 ## 1. Introduction
 이번 챕터에서는 실제 MIPS 구현을 살펴보겠습니다. MIPS 명령어 중 가장 핵심적인 부분인,
 - memory-reference instructions :  `load word(lw)` , `store word(sw)`
