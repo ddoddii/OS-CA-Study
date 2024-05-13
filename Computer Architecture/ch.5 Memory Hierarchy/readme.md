@@ -112,7 +112,7 @@ n-bit 물리 주소일 때,
 - set index : s bits 로, 캐시 내에 어떤 라인인지 나타낸다.
 - tag : 캐시에 있을 때 메모리 주소와 비교할 때 사용한다.
 
-32-bit 주소이고, direct-mapped 캐시를 사용하고, 캐시 사이즈는 $2^n$ 블럭일 때를 보자. 캐시 사이즈가  $2^n$ 블럭이므로 n개의 bit 가 index 로 사용된다. 블럭 사이즈는 $2^m$ words (=$2^{m+2}$ bytes) 이므로, m bits 가 블럭 내에 워드로 사용되고 2 bits 는 주소의 byte offset 부분으로 사용된다. 이때 tag field 의 사이즈는 $32-(n+m+2)$ 이다. 
+32-bit 주소이고, direct-mapped 캐시를 사용하고, 캐시 사이즈는 $2^n$ 블럭일 때를 보자. 캐시 사이즈가  $2^n$ 블럭이므로 n개의 bit 가 index 로 사용된다. 블럭 사이즈는 $2^m$ words (= $2^{m+2}$ bytes) 이므로, m bits 가 블럭 내에 워드로 사용되고 2 bits 는 주소의 byte offset 부분으로 사용된다. 이때 tag field 의 사이즈는 $32-(n+m+2)$ 이다. 
 
 direct-mapped 캐시 내에 전체 비트의 수는 아래와 같다. 
 $$2^{n} * (block \ size + tag \ size + valid \ field \ size)$$
