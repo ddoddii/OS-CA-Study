@@ -1,10 +1,10 @@
-# Ch.4 The Processor
+# The Processor
 
 <details>
 <summary>
 <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Bookmark%20Tabs.png" alt="Bookmark Tabs" width="25" height="25" /> Table of Contents </summary>
 
-- [Ch.4 The Processor](#ch4-the-processor)
+- [The Processor](#the-processor)
 	- [1. Introduction](#1-introduction)
 		- [Overview of Implementation](#overview-of-implementation)
 	- [2. Logical Design Conventions](#2-logical-design-conventions)
@@ -31,6 +31,7 @@
 		- [Assume Branch Not taken](#assume-branch-not-taken)
 		- [Reducing the Delay of Branches](#reducing-the-delay-of-branches)
 		- [Dynamic Branch Prediction](#dynamic-branch-prediction)
+	- [Reference](#reference)
 
 
 </details>
@@ -492,5 +493,7 @@ Fetch 할 적절한 명령어를 결정하는데 지연이 생기는 것을 cont
 <img width="587" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/4adbd6c1-a19c-4e14-858a-f332da594b0e">
 
 
+## Reference
+- Computer Organization and Design, 5th edition, Ch.4 The Processor
 
 

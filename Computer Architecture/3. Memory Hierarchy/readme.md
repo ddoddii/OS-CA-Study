@@ -1,10 +1,10 @@
-# Ch.5 Memory Hierarchy
+# Memory Hierarchy
 
 <details>
 <summary>
 <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Bookmark%20Tabs.png" alt="Bookmark Tabs" width="25" height="25" /> Table of Contents </summary>
 
-- [Ch.5 Memory Hierarchy](#ch5-memory-hierarchy)
+- [Memory Hierarchy](#memory-hierarchy)
 	- [1. Introduction](#1-introduction)
 	- [2. Memory Technologies](#2-memory-technologies)
 	- [3. The Basic of Caches](#3-the-basic-of-caches)
@@ -29,6 +29,7 @@
 		- [Implementing Protection with Virtual Memory](#implementing-protection-with-virtual-memory)
 		- [Handling TLB Misses and Page Faults](#handling-tlb-misses-and-page-faults)
 		- [Summary](#summary)
+	- [Reference](#reference)
 
 
 </details>
@@ -554,3 +555,6 @@ TLB miss 또는 page fault 를 다루는 것은 **예외(exception) 메커니즘
 가상 메모리 메카니즘은 프로세스가 사용하는 가상 주소에서 메인 메모리에 접근할 때 사용하는 물리 주소로의 **번역**을 제공한다. 이러한 번역은 메인 메모리를 공유할 때 보호만 제공하는 것이 아니라, 메모리 할당을 간편하게 한다는 장점도 있다. 프로세스가 서로에게서 보호된다는 것을 보장하기 위해 운영체제만 주소 번역을 바꿀 수 있도록 한다. 이것을 위해 유저 프로그램이 페이지 테이블을 바꿀 수 없게 한다. 
 
 만약 프로세서가 메모리에 있는 페이지 테이블을 매번 이용해야 한다면 성능이 매우 저하될 것이다. 따라서 TLB는 페이지 테이블을 위한 캐시로 동작한다. 주소들은 TLB에 있는 엔트리들을 이용해서 가상 주소에서 물리주소로 번역된다. 
+
+## Reference
+- Computer Organization and Design, 5th edition, Ch.5 Memory Hierarchy

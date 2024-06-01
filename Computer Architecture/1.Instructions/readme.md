@@ -1,31 +1,32 @@
-# Ch.2 Instructions : Language of the Computer
+# Instructions : Language of the Computer
 
 <details>
 <summary>
 <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Bookmark%20Tabs.png" alt="Bookmark Tabs" width="25" height="25" /> Table of Contents </summary>
 
-- [Ch.2 Instructions : Language of the Computer](#ch2-instructions--language-of-the-computer)
-  - [2.1 Introduction](#21-introduction)
+- [Instructions : Language of the Computer](#instructions--language-of-the-computer)
+  - [1. Introduction](#1-introduction)
     - [Instruction Set Architecture(ISA)](#instruction-set-architectureisa)
     - [Main Concepts](#main-concepts)
     - [MIPS R4000 ISA](#mips-r4000-isa)
-  - [2.2 Operations of the Computer Hardware](#22-operations-of-the-computer-hardware)
-  - [2.3 Operands of the Computer Hardware](#23-operands-of-the-computer-hardware)
+  - [2. Operations of the Computer Hardware](#2-operations-of-the-computer-hardware)
+  - [3. Operands of the Computer Hardware](#3-operands-of-the-computer-hardware)
     - [Memory Operands](#memory-operands)
     - [Constant or Immediate Operands](#constant-or-immediate-operands)
-  - [2.4 Signed and Unsigned Numbers](#24-signed-and-unsigned-numbers)
+  - [4. Signed and Unsigned Numbers](#4-signed-and-unsigned-numbers)
       - [2의 보수를 사용하여 부호 뒤집기](#2의-보수를-사용하여-부호-뒤집기)
-  - [2.5 Representing Instructions in the Computer](#25-representing-instructions-in-the-computer)
+  - [5 Representing Instructions in the Computer](#5-representing-instructions-in-the-computer)
     - [MIPS Fields](#mips-fields)
-  - [2.6 Logical Operations](#26-logical-operations)
-  - [2.7 Instructions for Making Decisions](#27-instructions-for-making-decisions)
+  - [6. Logical Operations](#6-logical-operations)
+  - [7. Instructions for Making Decisions](#7-instructions-for-making-decisions)
       - [Compiling if-then-else into Conditional Branches](#compiling-if-then-else-into-conditional-branches)
     - [Loops](#loops)
       - [Compiling while Loop in C](#compiling-while-loop-in-c)
+  - [Reference](#reference)
 
 </details>
 
-## 2.1 Introduction
+## 1. Introduction
 
 컴퓨터 언어는 instructions 라고 불리고, 단어들은 instruction set 이라고 한다. 따라서 Instruction Set Architecture 는 Computer Architecture 이다. 컴퓨터는 프로세서(Datapath and Control) + 메모리 + I/O 로 구성되어 있다.
 
@@ -68,7 +69,7 @@ PC가 가리키는 메모리에 있는 명령어를 가져와서, 그 명령어�
 
 <img width="392" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/e19e6076-55a4-4f50-94e3-733f396c5eb0">
 
-## 2.2 Operations of the Computer Hardware
+## 2. Operations of the Computer Hardware
 
 MIPS assembly language
 
@@ -80,7 +81,7 @@ add a, b, c
 
 MIPS 에서 하나의 연산은 무조건 3개의 variable을 요구한다. 자연적으로도, 덧셈과 같은 연산도 3개의 피연산자가 필요하다. MIPS는 이를 따름으로써 하드웨어를 간단하게 유지할 수 있다.
 
-## 2.3 Operands of the Computer Hardware
+## 3. Operands of the Computer Hardware
 
 High-Level 언어들과 달리, 산술 명령어의 피연산자들은 제한되어 있다. 그들은 **레지스터** 라는 특별한 하드웨어에서 와야 한다. MIPS 구조에서 레지스터의 사이즈는 32bits 이다. 32bits 는 꽤 자주 등장하기 때문에, MIPS 구조에서 "**word**" 라고 명명했다.
 
@@ -130,7 +131,7 @@ MIPS는 각 byte를 주소 지정하므로, word 주소는 4의 배수이다. �
 addi $s3, $s3, 4
 ```
 
-## 2.4 Signed and Unsigned Numbers
+## 4. Signed and Unsigned Numbers
 
 숫자들이 컴퓨터 하드웨어에서는 높고 낮은 전기신호로 되어 있기 때문에, 이진수 숫자들로 이루어져있다. 모든 정보는 binary digits 로 이루어져 있다. 어느 베이스 던지, ith digit d 의 값은 $d * Base^i$ 이다.
 
@@ -169,7 +170,7 @@ C 프로그램에서 바이트는 대부분 문자를 표현하는 데 사용되
 
 모든 비트를 0->1, 1->0 으로 바꾼 후, 결과에 1을 더하면 된다.
 
-## 2.5 Representing Instructions in the Computer
+## 5 Representing Instructions in the Computer
 
 명령어가 레지스터를 참조하기 때문에, 레지스터 이름을 숫자로 매핑하는 방법이 있어야 한다. MIPS assembly 언어에서, 레지스터 $ s0 에서 $s7 까지는 레지스터 16~23 까지 매핑되고, 레지스터 $t0 에서 $t7 까지는 8 ~ 15로 매핑된다.
 
@@ -218,7 +219,7 @@ MIPS 설계자들은 모든 명령어를 같은 길이로 유지하기로 선택
 
 <img width="243" alt="image" src="https://github.com/ddoddii/ddoddii.github.io/assets/95014836/c982bd23-9358-408c-ac68-e3823f7aca00">
 
-## 2.6 Logical Operations
+## 6. Logical Operations
 
 처음의 컴퓨터들은 word 전체에 대해 연산을 했다면, 이제 word 내부, 또는 bit 하나 단위로 연산을 하는 것이 필요해졌다. word 내에 8bits인 character를 검사하는 것 또한 예시이다. 이러한 연산들을 logical operations 이라고 한다.
 
@@ -236,7 +237,7 @@ MIPS 설계자들은 모든 명령어를 같은 길이로 유지하기로 선택
 
 상수는 `AND` 와 `OR` 연산에도 많이 쓰이므로, MIPS 는 _and immediate (andi)_ 와 _or immediate (ori)_ 연산을 포함시켰다.
 
-## 2.7 Instructions for Making Decisions
+## 7. Instructions for Making Decisions
 
 프로그래밍 언어에서 무언가를 결정할 때 사용하는 것은 if , go to 이다. MIPS 도 2개의 decision-making 명령어들이 있다. 이 두 명령어들은 conditional branches 라고 부른다.
 
@@ -295,4 +296,6 @@ Exit :
 
 ```
 
----
+## Reference
+
+- Computer Organization and Design, 5th edition, Ch.2 Instructions : Language of the Computer
