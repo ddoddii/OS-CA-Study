@@ -12,7 +12,11 @@
       - [Name Dependences](#name-dependences)
       - [Data Hazards](#data-hazards)
     - [Control Dependences](#control-dependences)
+    - [Out-of-Order Execution](#out-of-order-execution)
+    - [Multi-FU Pipeline](#multi-fu-pipeline)
+    - [Longer Latency Pipelines](#longer-latency-pipelines)
   - [2. Basic Compiler Techniques for Exposing ILP](#2-basic-compiler-techniques-for-exposing-ilp)
+    - [Basic Pipeline Scheduling and Loop Unrolling](#basic-pipeline-scheduling-and-loop-unrolling)
   - [Reference](#reference)
 
 
@@ -127,7 +131,7 @@ Data Hazard 는 3가지 종류가 있다. 명령어 i,j가 있고, 순서는 i->
 
 3. WAR(write after read)
 
-    j가 i가 read 하기 전에 write 를 하려고 시도할 때 발생합니다. 이때 i는 잘못된 값(j가 write를 해서 업데이트 된 값)을 read 할 수 있습니다. 
+    j가 i가 read 하기 전에 write 를 하려고 시도할 때 발생한다. 이때 i는 잘못된 값(j가 write를 해서 업데이트 된 값)을 read 할 수 있다. 
 
 
 ### Control Dependences
@@ -183,9 +187,114 @@ skip : or x7,x8,x9
 
 위의 코드에서 x4가 skip 명령어 이후에는 안 쓰인다는 것을 미리 알고 있다고 하자. 그렇다면 skip 이후에 x4는 dead 이므로, x4 를 브랜치 전에 변경하는 것은 data flow 에 영향을 주지 않는다. 
 
+### Out-of-Order Execution
+
+프로그램 실행 순서를 지키지 않아도 될 때는, Out-of-Order Execution을 통해 더 적은 CPI 를 달성할 수 있을 때거나, Multi-FP pipeline 인 경우 이다. 
+
+### Multi-FU Pipeline
+
+Multi-FU(멀티 기능 유닛) 파이프라인은 컴퓨터 아키텍처에서 여러 기능 유닛을 포함하여 다양한 종류의 명령을 동시에 실행할 수 있는 파이프라인이다. 
+
+<img width="345" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/488cccb5-4d30-4af4-9c86-bf48c0e92513">
+
+- **파이프라인 단계**
+  - IF (Instruction Fetch): 명령어를 메모리에서 가져온다.
+  - ID (Instruction Decode): 명령어를 해독하고 필요한 데이터를 준비한다.
+  - EX (Execute): 명령어를 실행한다. 이 단계에서는 여러 종류의 기능 유닛이 사용된다.
+  - MEM (Memory): 메모리 접근이 필요한 명령어를 처리한다.
+  - WB (Write Back): 실행 결과를 레지스터 파일에 쓴다.
+
+- **EX 단계**
+  - EX(실행) 단계는 여러 번 반복될 수 있으며, 이는 명령어의 종류에 따라 다르다. EX 단계에서 다양한 기능 유닛을 사용한다:
+    - 정수 유닛: 정수 연산을 처리한다.
+    - FP/정수 곱셈 유닛: 부동 소수점과 정수 곱셈 연산을 처리한다.
+    - FP 덧셈 유닛: 부동 소수점 덧셈 연산을 처리한다.
+    - FP/정수 나눗셈 유닛: 부동 소수점과 정수 나눗셈 연산을 처리한다.
+
+EX 단계는 여러 번 반복될 수 있으며, 반복 횟수는 연산 종류에 따라 다르다. 부동 소수점 연산을 위해 여러 기능 유닛이 있을 수 있다. 한 기능 유닛이 사용하는 명령어가 완료될 때까지 다른 명령어는 그 유닛을 사용할 수 없다. 이는 해당 유닛을 사용하는 명령어가 연달아 실행될 수 없음을 의미한다. 만약 명령어가 EX 단계로 진행할 수 없으면, 해당 명령어 뒤의 모든 파이프라인이 멈추게 되는 스톨이 발생한다. 즉, EX 단계에서 병목현상이 발생하면 전체 파이프라인이 영향을 받는다.
+
+Multi-FU 파이프라인에서 **EX 단계의 각 기능 유닛들이 파이프라인화** 될 수도 있다. 즉, 각 기능 유닛이 독립적으로 작동하며, 명령어를 동시에 여러 단계에서 처리할 수 있다.
+
+<img width="417" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/3860f92f-f09d-470d-b00d-1e2222958bc9">
+
+위의 구조를 적용했을 떄, 동시에 처리 가능한 작업 수:
+
+- 최대 4개의 부동 소수점 덧셈(FP adds)을 처리할 수 있다.
+- 최대 7개의 부동 소수점/정수 곱셈(FP/int multiplies)을 처리할 수 있다.
+- 최대 1개의 부동 소수점 나눗셈(FP divide)을 처리할 수 있다.
+
+
+나눗셈 유닛(divider)이 다른 유닛들에 비해 훨씬 오래 걸리는 경우, 나눗셈 명령어를 기다리느라 다른 명령어들도 대기해야 하는 상황이 발생할 수 있다. 예를 들어, 나눗셈 명령어는 25 사이클이 걸리기 때문에, 이 명령어를 기다리는 동안 다른 명령어들이 대기하게 되어 파이프라인이 정체(stall)될 수 있다. 이로 인해 사이클 당 명령어 수(CPI, Cycles Per Instruction)가 높아지며, 이는 성능 저하로 이어진다.
+
+이를 해결하기 위해, 명령어의 순서를 변경하여 파이프라인 스톨을 최소화할 수 있다. 이를 통해 처리량(throughput)을 높일 수 있다. 또한 여러 개의 나눗셈 유닛(divider)을 사용하여 동시에 여러 나눗셈 연산을 처리할 수 있도록 설계할 수 있다.
+
+### Longer Latency Pipelines
+
+더 긴 지연 시간을 가지는 파이프라인과 관련된 문제점들은 아래와 같다.
+
+1. Structural Hazards 
+
+    나눗셈 유닛이 파이프라인되지 않은 경우 구조적 해저드가 발생할 수 있다. 이는 한 기능 유닛을 여러 명령어가 동시에 사용하려고 할 때 발생하는 자원 충돌 문제이다. 예를 들어, 나눗셈 유닛이 하나밖에 없고 이 유닛이 여러 사이클 동안 바쁘다면, 다른 나눗셈 명령어는 기다려야 한다.
+
+2. Number of Register Writes in a Cycle
+
+    하나의 사이클에서 필요한 레지스터 쓰기 횟수가 1보다 클 수 있다. 여러 명령어가 동시에 실행되어 결과를 레지스터에 쓰려고 하면, 레지스터 파일의 쓰기 포트가 부족하여 병목현상이 발생할 수 있다.
+
+3. WAW Hazards (Write After Write 해저드)
+
+    명령어들이 프로그램 순서대로 WB(Write Back) 단계에 도달하지 않기 때문에 WAW 해저드가 발생할 수 있다. 이는 동일한 레지스터에 연속적으로 쓰기를 시도할 때 발생하는 문제이다.
+    두 명령어가 같은 레지스터에 결과를 쓰려고 할 때, 먼저 시작한 명령어가 나중에 시작한 명령어보다 나중에 완료되면 데이터 불일치가 발생할 수 있다.
+
+4. Instruction Completion Order
+
+    명령어들이 발행된 순서와 다른 순서로 완료될 수 있어 예외 처리 시 문제가 발생할 수 있다.
+    명령어 A가 명령어 B보다 먼저 발행되었지만 B가 먼저 완료되면, 예외 상황에서 올바르지 않은 순서로 처리되어 오류가 발생할 수 있다.
+
+5. RAW Hazards 
+
+    연산의 지연 시간이 길어짐에 따라 RAW 해저드로 인한 스톨이 더 빈번해질 수 있다. 이는 이전 명령어의 결과를 읽어야 하는 다음 명령어가 그 결과를 기다리면서 발생하는 문제이다.
+    명령어 A가 결과를 쓰기 전에 명령어 B가 그 결과를 읽으려고 하면, B는 A의 완료를 기다려야 하므로 파이프라인이 멈추게 됩니다.
 
 
 ## 2. Basic Compiler Techniques for Exposing ILP
+
+### Basic Pipeline Scheduling and Loop Unrolling
+
+파이프라인을 계속 바쁘게 만드려면, 연관 되어 있지 않는 명령어들을 찾아서 병렬적으로 실행시켜야 한다. 파이프라인 스톨을 피하려면, 파이프라인 스케쥴링을 해야 하는데, 이것은 의존성 있는 명령어를 원본 명령어의 파이프라인 지연 시간에 따라 분리하는 것이다.
+
+고수준 언어의 코드와 어셈블리로 바꾼 코드를 보자.
+
+```cpp
+for (i = 999; i >= 0; i = i + 1)
+  x[i] = x[i] + s;
+```
+
+```asm
+Loop: fld   f0, 0(x1)        // f0 <- 메모리에서 x1 레지스터가 가리키는 주소의 값을 로드
+      fadd.d f4, f0, f2     // f4 <- f0 + f2 (부동 소수점 덧셈)
+      fsd   f4, 0(x1)       // 메모리에 f4 값을 저장
+      addi  x1, x1, -8      // x1 <- x1 - 8 (다음 요소로 이동)
+      bne   x1, x2, Loop    // x1과 x2가 같지 않으면 Loop로 분기
+```
+
+아래의 표는  특정 명령어가 결과를 생성한 후 그 결과를 사용하는 명령어까지의 지연 시간을 나타낸다.
+
+| Instruction producing result | Instruction using result | Latency in clock cycles |
+|------------------------------|--------------------------|-------------------------|
+| FP ALU op                    | Another FP ALU op        | 3                       |
+| FP ALU op                    | Store double             | 2                       |
+| Load double                  | FP ALU op                | 1                       |
+| Load double                  | Store double             | 0                       |
+
+- FP ALU op (부동 소수점 연산):
+  - 다른 부동 소수점 연산이 결과를 사용하려면 3 사이클이 필요하다.
+  - 결과를 저장하려면 2 사이클이 필요하다.
+- Load double (메모리에서 부동 소수점 값 로드):
+  - 부동 소수점 연산이 결과를 사용하려면 1 사이클이 필요하다.
+  - 결과를 저장하려면 지연 시간이 없다.
+
+명령어 사이의 이러한 지연 시간을 고려하여, 의존성이 있는 명령어 사이에 다른 명령어들을 삽입함으로써 파이프라인 스톨을 방지하고 효율성을 극대화할 수 있다. 예를 들어, fld 명령어와 fadd.d 명령어 사이에 다른 독립적인 명령어를 삽입하여 fld의 결과를 기다리는 동안 파이프라인이 멈추지 않도록 할 수 있다.
+
 
 
 ## Reference
