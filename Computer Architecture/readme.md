@@ -9,7 +9,7 @@
 | Module  | Topic                                             |
 | ----- | ------------------------------------------------- |
 | M1  | Instructions: Language of the Computer       |
-| M2  | Pipelining                     |
-| M3  | The Processor, Memory Hierarchy, Caches                                |
+| M2  | Processor, Pipelining                     |
+| M3  | Memory Hierarchy, Caches                                |
 | M4  | Instruction-Level Parallelism |
 | M5 |      |
