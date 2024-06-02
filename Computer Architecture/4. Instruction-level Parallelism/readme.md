@@ -17,6 +17,11 @@
     - [Longer Latency Pipelines](#longer-latency-pipelines)
   - [2. Basic Compiler Techniques for Exposing ILP](#2-basic-compiler-techniques-for-exposing-ilp)
     - [Basic Pipeline Scheduling and Loop Unrolling](#basic-pipeline-scheduling-and-loop-unrolling)
+      - [Loop Unrolling](#loop-unrolling)
+      - [Loop Unrolling \& Pipeline Scheduling](#loop-unrolling--pipeline-scheduling)
+      - [Software Pipelining](#software-pipelining)
+      - [Loop Unrolling \& Software Pipelining](#loop-unrolling--software-pipelining)
+  - [3. Multiple Issue and Static Scheduling](#3-multiple-issue-and-static-scheduling)
   - [Reference](#reference)
 
 
@@ -74,7 +79,7 @@ for (i=0; i<=999; i++)
 
 아래의 RISC-V 코드를 보자. 
 
-```asm
+```
 Loop : fld f0,0(x1)      // f0 = array element
        faad.d f4,f0,f2   // add scalar in f2
        fsd f4,0(x1)      // store result
@@ -156,7 +161,7 @@ if p2 {
 
 **exception behavior**를 보존한다는 것은 명령어 실행 순서를 바꾸어도 프로그램 내에서 예외를 발생시키는 로직을 바꾸지 않는 것이다. 
 
-```asm
+```
 add x2,x3,x4
 beq x2,x0,L1
 ld x1,0(x2)
@@ -166,18 +171,19 @@ L1:
 
 **data flow**는 실제로 명령어 사이의 데이터 값의 흐름이다. 브랜치는 이 흐름을 다이나믹하게 만드는데, 이것은 주어진 명령어의 데이터 소스가 여러 곳에서 오는 것을 허용하기 때문이다. 
 
-```asm
+```
     add x1,x2,x3
     beq x4,x0,L
     sub x1,x5,x6
 L : ...
     or x7,x1,x8
 ```
+
 위의 코드에서, or 명령어에 의해 사용되는 x1 값은 브랜치가 테이큰 되었는지 안되었는지에 의존한다. or 명령어는 add 와 sub 둘다에 data-dependent 하다. 그러나 data dependence 순서를 지키는 것(add를 or 전에 실행하거나 sub 를 or 전에 실행하는 것)으로는 부족한데, 왜냐면 or 이 add 의 결과를 쓰느냐 아니면 sub까지의 결과를 쓰느냐는 beq 브랜치 명령어에 달려있기 때문이다. 따라서 올바른 실행은 data dependence 와 control dependence 둘 다 고려해야 한다. 이것을 data flow 를 보존한다고 한다. 
 
 가끔 control dependence를 위반하는 것이 exception behavior 과 data flow 에 영향을 주지 않을 수 도 있다. 
 
-```asm
+```
     add x1,x2,x3
     beq x12,x0,skip
     sub x4,x5,x6
@@ -253,7 +259,7 @@ Multi-FU 파이프라인에서 **EX 단계의 각 기능 유닛들이 파이프�
 5. RAW Hazards 
 
     연산의 지연 시간이 길어짐에 따라 RAW 해저드로 인한 스톨이 더 빈번해질 수 있다. 이는 이전 명령어의 결과를 읽어야 하는 다음 명령어가 그 결과를 기다리면서 발생하는 문제이다.
-    명령어 A가 결과를 쓰기 전에 명령어 B가 그 결과를 읽으려고 하면, B는 A의 완료를 기다려야 하므로 파이프라인이 멈추게 됩니다.
+    명령어 A가 결과를 쓰기 전에 명령어 B가 그 결과를 읽으려고 하면, B는 A의 완료를 기다려야 하므로 파이프라인이 멈추게 된다.
 
 
 ## 2. Basic Compiler Techniques for Exposing ILP
@@ -269,7 +275,7 @@ for (i = 999; i >= 0; i = i + 1)
   x[i] = x[i] + s;
 ```
 
-```asm
+```
 Loop: fld   f0, 0(x1)        // f0 <- 메모리에서 x1 레지스터가 가리키는 주소의 값을 로드
       fadd.d f4, f0, f2     // f4 <- f0 + f2 (부동 소수점 덧셈)
       fsd   f4, 0(x1)       // 메모리에 f4 값을 저장
@@ -293,7 +299,86 @@ Loop: fld   f0, 0(x1)        // f0 <- 메모리에서 x1 레지스터가 가리�
   - 부동 소수점 연산이 결과를 사용하려면 1 사이클이 필요하다.
   - 결과를 저장하려면 지연 시간이 없다.
 
-명령어 사이의 이러한 지연 시간을 고려하여, 의존성이 있는 명령어 사이에 다른 명령어들을 삽입함으로써 파이프라인 스톨을 방지하고 효율성을 극대화할 수 있다. 예를 들어, fld 명령어와 fadd.d 명령어 사이에 다른 독립적인 명령어를 삽입하여 fld의 결과를 기다리는 동안 파이프라인이 멈추지 않도록 할 수 있다.
+명령어 사이의 이러한 지연 시간을 고려하여, **의존성이 있는 명령어 사이에 다른 명령어들을 삽입**함으로써 파이프라인 스톨을 방지하고 효율성을 극대화할 수 있다. 예를 들어, fld 명령어와 fadd.d 명령어 사이에 다른 독립적인 명령어를 삽입하여 fld의 결과를 기다리는 동안 파이프라인이 멈추지 않도록 할 수 있다.
+
+만약 스케쥴링이 없다면, 루프는 왼쪽과 같이 8번의 사이클이 걸릴 것이다. 그러나 addi 를 옮겨서 **스케쥴링**하면, 총 **7 사이클**로 줄어든다. `addi` 를 `fld` 다음으로 옮겨서, `fld` 다음의 stall 을 안 넣을 수 있다.  
+
+<img width="1103" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/f1de2af2-aa26-49d0-bbe0-2b1b94f28e32">
+
+#### Loop Unrolling
+
+하지만 위의 예시에서, 실제 배열에 대한 연산을 하는 것은 7개의 사이클 중 3개 사이클(load, add, store) 뿐이다. 
+
+1. 데이터 로드(fld f0, 0(x1)) - 1 클럭 사이클:
+
+    첫 번째 명령어는 fld f0, 0(x1)로, 이는 메모리 주소 x1에서 데이터를 읽어와 f0 레지스터에 저장하는 명령어이다. 이 작업은 1개의 클럭 사이클이 소요된다.
+
+2. 데이터 계산(fadd.d f4, f0, f2) - 1 클럭 사이클:
+
+    세 번째 명령어는 fadd.d f4, f0, f2로, 이는 f0 레지스터와 f2 레지스터의 값을 더해 f4 레지스터에 저장하는 부동 소수점 덧셈 명령어이다. 이 작업 역시 1개의 클럭 사이클이 소요된다.
+
+3. 데이터 저장(fsd f4, 8(x1)) - 1 클럭 사이클:
+
+    섯 번째 명령어는 fsd f4, 8(x1)로, 이는 f4 레지스터의 데이터를 메모리 주소 x1에 저장하는 명령어이다. 이 작업도 1개의 클럭 사이클이 소요된다.
+
+
+나머지 명령어 - `addi x1, x1, -8` 는 배열을 다음 요소로 이동시키기 위한 명령어이고, `bne x1, x2, loop` 는 x1 과 x2 가 같지 않으면 루프의 시작으로 분기하는 명령어이다. 나머지 명령어 2개와 stall 2개에 필요한 4개의 클럭 사이클을 없애려면, 추가적인 연산이 필요하다. 이것을 **loop unrolling** 이라고 한다. Loop unrolling 은 단순하게 루프 바디를 복제해서 여러번 작성하는 방식이다. 
+
+만약 루프의 이터레이션 수가 4라고 가정하면, 루프를 factor 4로 unroll 할 수 있다. 이때 각 이터레이션 당 addi & bne 를 생략하고, 모든 이터레이션이 끝나면 한 번만 실행할 수 있다. 따라서 아래의 코드에서 4번의 이터레이션을 위해 26번 사이클이 필요하고, 이것은 배열 요소 당 **6.5 사이클**이 걸린다. 그러나 이 방법으로는, 코드의 길이가 매우 길어져서 레지스터에 부담이 간다(**register pressure**).
+
+<img width="523" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/54db6e54-9b7c-44c5-a225-c31179261f97">
+
+#### Loop Unrolling & Pipeline Scheduling
+
+그러나 문제는, 실제 프로그램에서 우리는 루프의 상한선을 알지 못한다는 것이다. n이라고 가정했을 때, 우리는 루프를 unroll 해서 바디의 k개 복사를 만들고 싶다고 가정해 보자. 단일 unrolled loop 대신에, 우리는 두개의 연속적인 루프를 생성한다. 첫번째는 (n mod k) 번 실행되며, 본체는 원래의 루프이다. 두번째는 unrolled loop 본체로, (n/k)번 반복하는 외부 루프에 둘러싸여 있다. 이 테크닉을 **strip mining** 이라고 한다. 아주 큰 값 n에 대해서, 대부분의 실행 시간은 루프 본체에서 소비될 것이다. 
+
+이전 예제에서, 루프 펼치기(unrolling)는 오버헤드 명령어를 제거하여 루프의 성능을 향상시킨다. 하지만, 코드 크기는 상당히 증가한다. 파이프라인이 앞서 설명된 대로 **스케줄링** 될 때, 펼쳐진 루프는 어떻게 성능을 발휘할까? 
+
+스케줄링은 **명령어들을 재배열하여 데이터 의존성을 최소화**하고, **병렬 실행을 최대화**하는 과정이다. 각 명령어의 실행 순서를 최적화하여 가능한 한 많은 명령어가 동시에 실행되도록 한다. 예를 들어, 특정 명령어가 완료되기를 기다리지 않고 다른 명령어를 먼저 실행함으로써 스톨을 피할 수 있다. 또한 **register renaming** 을 통해, 서로 다른 루프 반복에서 사용하는 레지스터를 다르게 하여 데이터 의존성을 제거하고 병렬 처리를 가능하게 한다. 
+
+아래의 코드에서, 총 14 클럭 사이클이 걸렸고 이것은 각 배열 원소 당 14/4 = **3.5 사이클**이 걸렸음을 의미한다. 
+
+<img width="333" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/fbee618e-e74c-4312-9458-bebac026feab">
+
+
+#### Software Pipelining
+
+소프트웨어 파이프라이닝은 루프의 성능을 최적화하기 위해 루프의 명령어들을 재구성하는 기법이다. 루프의 각 반복(iteration)을 재구성하여, 소프트웨어 파이프라이닝된 코드의 각 반복이 원래 루프의 다양한 반복에서 선택된 명령어들로 구성되도록 한다. 이 과정에서 데이터 의존성(dependent computations)을 분리하여, 각 반복 내에서 데이터 의존성을 최소화하고 병렬 처리가 가능하도록 한다.
+
+<img width="442" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/ff9168eb-b2b5-4a31-9935-e220830a32fe">
+
+예를 들어, 그림에서 Iteration 0, 1, 2, 3, 4의 명령어들이 서로 겹쳐진 형태로 실행된다. 이는 각 반복이 독립적으로 실행되지 않고, 파이프라인 방식으로 동시에 여러 반복이 진행됨을 의미한다.
+
+예시 코드를 보자.
+
+<img width="286" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/aca8ffda-be26-4286-995c-056295272123">
+
+이 코드를 소프트웨어 파이프라이닝을 통해 이 명령어들을 재배열하여, 아래의 최적화된 루프를 구성할 수 있다.
+
+<img width="403" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/51caca58-31eb-42b5-8eba-7062ba5c8fab">
+
+최적화된 루프는 각 반복에서 명령어들이 재배열되어 있다. 예를 들어, fld, addi, fadd.d, fsd 명령어들이 서로 다른 반복에서 선택되어 하나의 반복으로 결합된다. 이 과정에서 데이터 의존성으로 인한 스톨이 제거된다. 이렇게 최적화된 루프는 배열 요소 당 **5 사이클**이 걸린다. 
+
+#### Loop Unrolling & Software Pipelining
+
+**Loop Unrolling** 의 목적은, 루프 제어 오버헤드를 줄이는 것이다. 루프의 각 반복에서 반복 조건을 검사하고 인덱스를 업데이트하는 오버헤드를 줄임으로써 사이클 수 를 줄일 수 있다. 
+
+**Software Pipelining** 의 목적은, 루프가 최대 속도로 실행되지 않는 시간을 줄이고, 루프의 시작과 끝에서만 이러한 상태가 발생하도록 하는 것이다. 반복 간의 명령어를 재배열하여 데이터 의존성으로 인한 스톨을 줄이고, 가능한 한 많은 명령어가 병렬로 실행될 수 있도록 한다.
+
+두 기법을 결합하여, 루프 언롤링과 소프트웨어 파이프라이닝의 장점을 동시에 활용할 수 있다. 예를 들어, 루프 언롤링을 통해 오버헤드를 줄이면서, 소프트웨어 파이프라이닝을 통해 명령어 병렬성을 극대화할 수 있다.
+
+<img width="448" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/2c3bc477-3477-49dd-bf6b-f6e1670d4634">
+
+## 3. Multiple Issue and Static Scheduling
+
+CPI 를 1보다 줄이려면, 한 사이클에 여러 개의 명령어를 실행해야 한다. 이때 사용할 수 있는 방법은, 1) superscalar processors, 2) VLIW(Very Long Instruction Word) processors 이다. 
+
+VLIW는 여러 개의 연산을 하나의 명령어로 압축한다. 그리고 여러 개의 독립적인 Functional unit 들을 사용한다. 고정된 수의 명령어를 한 번에 발행하며, 각 명령어는 하나의 큰 명령어로 포맷된다. 컴파일러가 명령어 병렬성을 명시적으로 결정하여 스케줄을 설정한다. 정적으로 스케줄된 구조로 인해 하드웨어가 단순해지지만, 컴파일러의 최적화 능력이 매우 중요하다.
+
+이전 예시의 `x[i] = x[i] + s` 루프를 unrolling factor 7 로 언롤링하면, 9 사이클에 7번에 반복을 실행하므로 각 배열 요소 당 1.29 사이클이 소요된다. 루프 본체의 명령어들이 메모리 참조, 부동 소수점 연산, 정수 연산 및 분기 등으로 분리되어 여러 개의 함수 유닛(functional units)을 사용한다. 따라서 각 명령어는 동시에 실행될 수 있다.
+
+<img width="665" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/cc99a089-29ed-4fa6-8c99-1f8ae6f0bd0c">
+
 
 
 
