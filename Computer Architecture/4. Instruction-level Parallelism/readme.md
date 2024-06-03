@@ -22,6 +22,11 @@
       - [Software Pipelining](#software-pipelining)
       - [Loop Unrolling \& Software Pipelining](#loop-unrolling--software-pipelining)
   - [3. Multiple Issue and Static Scheduling](#3-multiple-issue-and-static-scheduling)
+  - [4. Dynamic Instruction Scheduling \& Scorboarding](#4-dynamic-instruction-scheduling--scorboarding)
+    - [Out-of-Order Execution and Hazards](#out-of-order-execution-and-hazards)
+    - [Dynamic Scheduling with a Scorboard](#dynamic-scheduling-with-a-scorboard)
+      - [Four Stages of Scoreboard Control](#four-stages-of-scoreboard-control)
+      - [Implementation of the Scoreboard](#implementation-of-the-scoreboard)
   - [Reference](#reference)
 
 
@@ -378,6 +383,103 @@ VLIW는 여러 개의 연산을 하나의 명령어로 압축한다. 그리고 �
 이전 예시의 `x[i] = x[i] + s` 루프를 unrolling factor 7 로 언롤링하면, 9 사이클에 7번에 반복을 실행하므로 각 배열 요소 당 1.29 사이클이 소요된다. 루프 본체의 명령어들이 메모리 참조, 부동 소수점 연산, 정수 연산 및 분기 등으로 분리되어 여러 개의 함수 유닛(functional units)을 사용한다. 따라서 각 명령어는 동시에 실행될 수 있다.
 
 <img width="665" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/cc99a089-29ed-4fa6-8c99-1f8ae6f0bd0c">
+
+
+## 4. Dynamic Instruction Scheduling & Scorboarding
+
+다이나믹 스케쥴링은 하드웨어가 명령어 실행 순서를 조정해서 stall 을 최소화한다. 다이나믹 스케쥴링의 핵심 아이디어는, 1) stall 이전의 명령어가 미리 실행되는 것(out-of-order), 2) hazard를 피하기 위한 register renaming 이다.
+
+<img width="601" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/72d1ee94-3997-466d-ac80-7a8725a985ca">
+
+### Out-of-Order Execution and Hazards
+
+우리의 목적인 명령어가 데이터 피연산자가 준비되자마자 실행을 시작하는 것이다. 이때 hazard 가 없도록 주의해야 한다.
+
+<img width="459" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/d674985f-5957-4fde-9f7e-f5d04a633948">
+
+
+<img width="843" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/c19fa3b7-adf0-4304-bf3f-83f26dbafa54">
+
+위의 예시에서 2가지의 Hazard 가 발생할 수 있다.
+
+- RAW hazard 
+  - MULTD 명령어의 결과를 DIVD 명령어가 읽어야 하므로, MULTD 명령어가 끝날 때까지 DIVD 명령어가 스톨된다.
+- WAR hazard
+  - DIVD 명령어가 F6에 결과를 기록하기 전에 ADDD 명령어가 F6을 읽어야 하므로, ADDD 명령어가 먼저 실행된다.
+
+
+Out-of-Order 에는 2가지 실행 방법이 있다 : **Scoreboarding**, **Tomasulo's Algorithm**.
+
+- **Scoreboarding**
+  - 스코어보딩은 명령어가 실행될 수 있는 충분한 자원(예: 함수 유닛)이 있을 때, 그리고 데이터 의존성이 없을 때, 명령어를 비순차적으로 실행할 수 있게 하는 기법이다. 주로 WAR hazard 를 처리한다.
+- **Tomasulo's Algorithm**
+  - 토마슐로 알고리즘은 비순차 실행을 지원하며, 보다 복잡한 데이터 의존성 관리와 추측 실행(speculative execution)을 포함하는 고급 기법이다. WAR 및 WAW hazard 를 처리한다. 명령어의 추측 실행(speculations)을 통해 성능을 극대화한다.
+
+### Dynamic Scheduling with a Scorboard
+
+스코어보딩에서는 ID 스테이지를 2 단계로 나눈다.
+
+- Issue : 명령어를 해석하고, 구조적 해저드를 체크한다.
+- Read operands : 데이터 해저드가 없을 때까지 기다리고, 오퍼랜드를 읽는다.
+
+스코어보드는 명령어를 이슈하고 실행하는 것에 총 책임을 진다. 명령어가 언제 오퍼랜드를 읽고, 실행을 시작하고, 결과를 쓰는 것을 결정한다.
+
+아래는 스코어보드 아키텍쳐이다. 
+
+
+<img width="772" alt="image" src="https://github.com/ddoddii/OS-CA-Study/assets/95014836/7b0d8ba8-514c-4a46-bf89-714938d5e1ff">
+
+
+#### Four Stages of Scoreboard Control
+
+1. Issue
+
+- 명령어를 디코딩하고, 구조적 해저드를 확인한다.
+- 해저드를 검사하기 위해, 명령어는 프로그램 순서대로 발행된다.
+- 구조적 해저드가 있는 경우 발행할 수 없다. (e.g 사용가능한 FU가 없는 경우)
+- 명령어가 이전에 발행된 명령어의 결과에 의존하는 경우 발행을 스톨한다. 이것은 WAW 해저드를 방지한다.
+
+2. Read operands
+
+- 데이터 해저드가 없을 때까지 기다린 후 오퍼랜드을 읽는다.
+- 참된 데이터 의존성(e.g RAW 해저드)은 이전에 발행된 명령어가 소스 오퍼랜드를 기록할 때까지 기다림으로써 해결된다.
+- 스코어보딩에서는 데이터 전달(forwarding)을 사용하지 않는다. 모든 데이터는 레지스터에 기록된 후에야 사용할 수 있다.
+
+
+3. Execute
+
+- 함수 유닛(Functional Unit)이 오퍼랜드를 받은 후 실행을 시작한다.
+- 연산이 완료되면 스코어보드에 완료 사실을 알린다.
+
+
+4. Write Result
+
+- 연산 결과를 레지스터 파일에 기록한다.
+- 이전에 발행된 명령어와 안티 의존성(WAR 해저드)이 없을 때까지 결과를 레지스터 파일에 기록하지 않는다.
+
+```
+div.d  f0, f2, f4
+add.d  f10, f0, f8
+sub.d  f8, f8, f14
+```
+
+- `div.d` : 이 명령어는 f0 레지스터에 결과를 쓴다.
+- `add.d` : 이 명령어는 f8, f0 레지스터 값을 사용하고, f10 레지스터에 값을 쓴다.
+- `sub.d` : 이 명령어는 f8 레지스터의 값을 사용하고, 또 f8 레지스터에 결과를 쓴다.
+
+`add.d` 명령어가 f8 레지스터의 값을 사용하고, `sub.d` 명령어가 f8 레지스터에 쓰기를 시도할 때 안티 의존성(**WAR 해저드**)이 발생한다. 이 경우, `sub.d` 명령어는 f8 레지스터의 값을 읽기 전에 `add.d` 명령어가 f8 레지스터의 값을 사용할 수 없다. 따라서 `add.d` 명령어가 실행 완료될 때까지 `sub.d` 명령어는 스톨된다.
+
+#### Implementation of the Scoreboard
+
+- **Instruction status** : 명령어가 네 단계(Issue, Read operands, Execute, Write result) 중 어느 단계에 있는지를 나타낸다.
+- **Functional unit status** : 각 함수 유닛(FU)의 상태를 나타낸다.
+  - Busy: 함수 유닛이 바쁜 상태인지 아닌지를 나타낸다.
+  - Op: 함수 유닛에서 수행할 연산을 나타낸다.
+  - Fi: 결과를 저장할 목적 레지스터 번호이다.
+  - Fj, Fk: 소스 레지스터 번호들이다. 이 레지스터들에서 데이터를 읽는다.
+  - Qj, Qk: 소스 레지스터 값을 생성하는 함수 유닛들이다. 이는 데이터 의존성을 추적하는 데 사용된다.
+  - Rj, Rk: 소스 레지스터 값이 준비되었음을 나타내는 플래그이다.
+- **Register result status** : 각 레지스터에 어떤 함수 유닛이 값을 쓸 것인지 나타낸다. 대기 중인 명령어가 없으면 빈 칸으로 둔다.
 
 
 
